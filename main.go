@@ -55,6 +55,14 @@ func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		fmt.Fprintf(w, string(out))
+	case http.MethodPost:
+		decoder := json.NewDecoder(r.Body)
+		var team models.Team
+		err := decoder.Decode(&team)
+		if err != nil {
+			panic(err)
+		}
+		env.db.CreateTeam(team.Name)
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}

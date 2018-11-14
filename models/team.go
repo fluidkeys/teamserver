@@ -1,5 +1,7 @@
 package models
 
+import "github.com/satori/go.uuid"
+
 // A Team represents a Fluidkeys team that use the server
 type Team struct {
 	ID   string `json:"id,omitempty"`
@@ -29,4 +31,16 @@ func (db *DB) AllTeams() ([]*Team, error) {
 		return nil, err
 	}
 	return teams, nil
+}
+
+// CreateTeam inserts a record for the given teamName in the database
+func (db *DB) CreateTeam(teamName string) (int64, error) {
+	uuid := uuid.NewV4()
+	sqlStatement := `INSERT INTO teams (name, uuid) VALUES ($1, $2) RETURNING id`
+	var id int64
+	err := db.QueryRow(sqlStatement, teamName, uuid).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }

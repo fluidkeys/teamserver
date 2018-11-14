@@ -6,6 +6,7 @@ import (
 
 type Datastore interface {
 	AllTeams() ([]*Team, error)
+	CreateTeam(string) (int64, error)
 }
 
 type DB struct {
