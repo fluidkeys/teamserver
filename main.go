@@ -44,22 +44,20 @@ func main() {
 }
 
 func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	switch r.Method {
+	case http.MethodGet:
+		teams, err := env.db.AllTeams()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		out, err := json.Marshal(teams)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		fmt.Fprintf(w, string(out))
+	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
 	}
-	teams, err := env.db.AllTeams()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	out, err := json.Marshal(teams)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	fmt.Fprintf(w, string(out))
 }
 
 // Port retrieves the port from the environment so we can run on Heroku
