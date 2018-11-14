@@ -29,10 +29,7 @@ type Env struct {
 }
 
 func main() {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-	db, err := models.NewDB(connStr)
+	db, err := models.NewDB(connStr())
 	if err != nil {
 		log.Panic(err)
 	}
@@ -74,4 +71,15 @@ func Port() string {
 		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
 	}
 	return ":" + port
+}
+
+func connStr() string {
+	herokuDatabaseUrl, present := os.LookupEnv("DATABASE_URL")
+	if present {
+		return herokuDatabaseUrl
+	} else {
+		return fmt.Sprintf("host=%s port=%d user=%s "+
+			"password=%s dbname=%s sslmode=disable",
+			host, port, user, password, dbname)
+	}
 }
