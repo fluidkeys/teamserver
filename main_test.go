@@ -25,8 +25,8 @@ func TestBooksIndex(t *testing.T) {
 	http.HandlerFunc(env.teamsIndex).ServeHTTP(rec, req)
 
 	expected :=
-		`[{"id":"1","name":"Imagine Corporation","uuid":"e44e4317-fea1-414a-a176-2462a26b6825"},` +
-			`{"id":"2","name":"Flex Tech Inc.","uuid":"acbcd1a9-1b52-4014-9f5b-5bb6a809be3b"}]`
+		`[{"id":"1","teamName":"Imagine Corporation","uuid":"e44e4317-fea1-414a-a176-2462a26b6825"},` +
+			`{"id":"2","teamName":"Flex Tech Inc.","uuid":"acbcd1a9-1b52-4014-9f5b-5bb6a809be3b"}]`
 	if expected != rec.Body.String() {
 		t.Errorf("\n...expected = %v\n...obtained = %v", expected, rec.Body.String())
 	}

@@ -3,7 +3,7 @@ package models
 // A Team represents a Fluidkeys team that use the server
 type Team struct {
 	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Name string `json:"teamName,omitempty"`
 	UUID string `json:"uuid,omitempty"`
 }
 
