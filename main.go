@@ -98,7 +98,11 @@ func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Fprintf(w, teamUUID.String())
+		out, err := json.Marshal(models.TeamUUID{UUID: teamUUID.String()})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		fmt.Fprintf(w, string(out))
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
