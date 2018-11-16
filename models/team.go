@@ -66,14 +66,14 @@ func (db *DB) CreateTeam(teamName string) (int64, *uuid.UUID, error) {
 
 // CreateTeamUser inserts a record for the given user in the database
 func (db *DB) CreateTeamUser(teamId int64, fingerprint string) (int64, error) {
-	sqlStatement := `INSERT INTO team_users (team_id, fingerprint) VALUES ($1, $2) RETURNING id`
+	sqlStatement := `INSERT INTO team_users (team_id, fingerprint, is_admin) VALUES ($1, $2, $3) RETURNING id`
 	writeDB, err := db.Begin()
 	if err != nil {
 		writeDB.Rollback()
 		return 0, err
 	}
 	var teamUserId int64
-	err = writeDB.QueryRow(sqlStatement, teamId, fingerprint).Scan(&teamUserId)
+	err = writeDB.QueryRow(sqlStatement, teamId, fingerprint, true).Scan(&teamUserId)
 	if err != nil {
 		writeDB.Rollback()
 		return 0, err
