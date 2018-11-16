@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  digest = "1:794b0374eaa547e9c375736a05da2a740e695c8816e42d30984228e0c1a5436b"
+  name = "github.com/fluidkeys/crypto"
+  packages = [
+    "cast5",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
+  ]
+  pruneopts = "UT"
+  revision = "ec3104695d7bb6be745567825a91120d4b1dc2bf"
+  version = "2018-09-13"
+
+[[projects]]
   digest = "1:8ef506fc2bb9ced9b151dafa592d4046063d744c646c1bbe801982ce87e4bc24"
   name = "github.com/lib/pq"
   packages = [
@@ -24,6 +40,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/fluidkeys/crypto/openpgp",
     "github.com/lib/pq",
     "github.com/satori/go.uuid",
   ]
