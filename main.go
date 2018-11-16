@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/fluidkeys/crypto/openpgp"
 	"github.com/fluidkeys/teamserver/models"
 
 	_ "github.com/lib/pq"
@@ -57,12 +59,44 @@ func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, string(out))
 	case http.MethodPost:
 		decoder := json.NewDecoder(r.Body)
-		var team models.Team
-		err := decoder.Decode(&team)
+		var teamPost models.TeamsPOST
+		err := decoder.Decode(&teamPost)
 		if err != nil {
 			panic(err)
 		}
-		env.db.CreateTeam(team.Name)
+
+		entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(teamPost.PublicKey))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error reading armored key ring: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if len(entityList) != 1 {
+			http.Error(w, fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList)), http.StatusInternalServerError)
+			return
+		}
+		entity := entityList[0]
+
+		fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
+
+		_, err = env.db.CreatePublicKey(fingerprint, teamPost.PublicKey)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		teamID, teamUUID, err := env.db.CreateTeam(teamPost.Name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		_, err = env.db.CreateTeamUser(teamID, fingerprint)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		fmt.Fprintf(w, teamUUID.String())
 	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
@@ -80,12 +114,19 @@ func Port() string {
 }
 
 func connStr() string {
-	herokuDatabaseUrl, present := os.LookupEnv("DATABASE_URL")
+	herokuDatabaseURL, present := os.LookupEnv("DATABASE_URL")
 	if present {
-		return herokuDatabaseUrl
-	} else {
-		return fmt.Sprintf("host=%s port=%d user=%s "+
-			"password=%s dbname=%s sslmode=disable",
-			host, port, user, password, dbname)
+		return herokuDatabaseURL
 	}
+	return fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+}
+
+func fingerprintString(b [20]byte) string {
+	return fmt.Sprintf(
+		"%0X %0X %0X %0X %0X  %0X %0X %0X %0X %0X",
+		b[0:2], b[2:4], b[4:6], b[6:8], b[8:10],
+		b[10:12], b[12:14], b[14:16], b[16:18], b[18:20],
+	)
 }
