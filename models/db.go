@@ -2,10 +2,15 @@ package models
 
 import (
 	"database/sql"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 type Datastore interface {
 	AllTeams() ([]*Team, error)
+	CreateTeam(string) (int64, *uuid.UUID, error)
+	CreateTeamUser(int64, string) (int64, error)
+	CreatePublicKey(string, string) (int64, error)
 }
 
 type DB struct {

@@ -1,0 +1,5 @@
+CREATE TABLE teams (
+  id SERIAL UNIQUE PRIMARY KEY
+, name VARCHAR(255) NOT NULL
+, uuid UUID
+);
