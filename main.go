@@ -67,11 +67,13 @@ func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
 
 		entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(teamPost.PublicKey))
 		if err != nil {
-			http.Error(w, fmt.Sprintf("error reading armored key ring: %v", err), http.StatusInternalServerError)
+			err := fmt.Sprintf("error reading armored key ring: %v", err)
+			http.Error(w, formatAsJSONMessage(err), http.StatusInternalServerError)
 			return
 		}
 		if len(entityList) != 1 {
-			http.Error(w, fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList)), http.StatusInternalServerError)
+			err := fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList))
+			http.Error(w, formatAsJSONMessage(err), http.StatusInternalServerError)
 			return
 		}
 		entity := entityList[0]
@@ -80,19 +82,19 @@ func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
 
 		_, err = env.db.CreatePublicKey(fingerprint, teamPost.PublicKey)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
 
 		teamID, teamUUID, err := env.db.CreateTeam(teamPost.Name)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
 
 		_, err = env.db.CreateTeamUser(teamID, fingerprint)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
 
@@ -129,4 +131,9 @@ func fingerprintString(b [20]byte) string {
 		b[0:2], b[2:4], b[4:6], b[6:8], b[8:10],
 		b[10:12], b[12:14], b[14:16], b[16:18], b[18:20],
 	)
+}
+
+func formatAsJSONMessage(message string) string {
+	bytes, _ := json.Marshal(map[string]string{"message": message})
+	return string(bytes)
 }
