@@ -14,8 +14,7 @@
     "openpgp/s2k",
   ]
   pruneopts = "UT"
-  revision = "ec3104695d7bb6be745567825a91120d4b1dc2bf"
-  version = "2018-09-13"
+  revision = "2018-09-13"
 
 [[projects]]
   digest = "1:8ef506fc2bb9ced9b151dafa592d4046063d744c646c1bbe801982ce87e4bc24"
