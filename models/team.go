@@ -22,6 +22,14 @@ type TeamsPOST struct {
 	PublicKey string `json:"publicKey,omitempty"`
 }
 
+type omit *struct{}
+
+type TeamSummary struct {
+	*Team
+	ID   omit `json:"id,omitempty"`
+	UUID omit `json:"uuid,omitempty"`
+}
+
 // AllTeams reads all the teams in the database
 func (db *DB) AllTeams() ([]*Team, error) {
 	teams := make([]*Team, 0)

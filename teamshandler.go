@@ -8,27 +8,44 @@ import (
 
 	"github.com/fluidkeys/crypto/openpgp"
 	"github.com/fluidkeys/teamserver/models"
+	uuid "github.com/satori/go.uuid"
 )
 
 // TeamsHandler is used to server up HTTP requests to `/teams`
 type TeamsHandler struct {
+	SummaryHandler *SummaryHandler
 }
 
 func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db models.Datastore) {
 	var uuid string
-	uuid, req.URL.Path = shiftPath(req.URL.Path)
-	fmt.Printf("uuid: %s\n", uuid)
-	fmt.Printf("req.URL.Path: %s\n", req.URL.Path)
-	if req.URL.Path == "/" && uuid == "" {
+	uuid, tail := shiftPath(req.URL.Path)
+	if uuid == "" {
 		switch req.Method {
 		case "GET":
 			h.handleIndexGet(db).ServeHTTP(res, req)
 		case "POST":
 			h.handleIndexPost(db).ServeHTTP(res, req)
 		default:
-			http.Error(res, "Only GET or POST are allowed", http.StatusMethodNotAllowed)
+			http.Error(res, "Only GET and POST are allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		switch tail {
+		case "/":
+			h.handleGet(uuid, db).ServeHTTP(res, req)
+		case "/summary":
+			h.SummaryHandler.Handler(uuid, db).ServeHTTP(res, req)
+		default:
+			http.Error(res, "Not Found", http.StatusNotFound)
+		}
+	} else {
+		switch req.Method {
+		case "GET":
+			h.handleGet(uuid, db).ServeHTTP(res, req)
+		default:
+			http.Error(res, "Only GET is allowed", http.StatusMethodNotAllowed)
 		}
 	}
+	return
 }
 
 func (h *TeamsHandler) handleIndexGet(db models.Datastore) http.Handler {
@@ -95,6 +112,45 @@ func (h *TeamsHandler) handleIndexPost(db models.Datastore) http.Handler {
 	})
 }
 
-func (h *TeamsHandler) handleGet(uuid string) {
-	fmt.Printf("UUID: %v\n", uuid)
+func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		uuid, err := uuid.FromString(uuidString)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		team, err := db.GetTeam(uuid)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		out, err := json.Marshal(team)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		fmt.Fprintf(res, string(out))
+	})
+}
+
+// SummaryHandler is used to server up HTTP requests to `/teams/{uuid}/summary`
+type SummaryHandler struct{}
+
+// Handler takes a team UUID and database and then looks up the record in the
+// database, writing JSON back.
+func (h *SummaryHandler) Handler(uuidString string, db models.Datastore) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		uuid, err := uuid.FromString(uuidString)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		team, err := db.GetTeam(uuid)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		out, err := json.Marshal(models.TeamSummary{
+			Team: team,
+		})
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+		}
+		fmt.Fprintf(res, string(out))
+	})
 }
