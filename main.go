@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 
-	"github.com/fluidkeys/crypto/openpgp"
 	"github.com/fluidkeys/teamserver/models"
 
 	_ "github.com/lib/pq"
@@ -27,7 +27,18 @@ var (
 
 // Env provides a way to hook into the database
 type Env struct {
-	db models.Datastore
+	db           models.Datastore
+	TeamsHandler *TeamsHandler
+}
+
+func (env *Env) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	var head string
+	head, req.URL.Path = shiftPath(req.URL.Path)
+	if head == "teams" {
+		env.TeamsHandler.ServeHTTP(res, req, env.db)
+		return
+	}
+	http.Error(res, "Not Found", http.StatusNotFound)
 }
 
 func main() {
@@ -35,76 +46,11 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	env := &Env{db, new(TeamsHandler)}
 
-	env := &Env{db}
-
-	http.HandleFunc("/teams", env.teamsIndex)
-	err = http.ListenAndServe(Port(), nil)
+	err = http.ListenAndServe(Port(), env)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
-	}
-}
-
-func (env *Env) teamsIndex(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		teams, err := env.db.AllTeams()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		out, err := json.Marshal(teams)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		fmt.Fprintf(w, string(out))
-	case http.MethodPost:
-		decoder := json.NewDecoder(r.Body)
-		var teamPost models.TeamsPOST
-		err := decoder.Decode(&teamPost)
-		if err != nil {
-			panic(err)
-		}
-
-		entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(teamPost.PublicKey))
-		if err != nil {
-			err := fmt.Sprintf("error reading armored key ring: %v", err)
-			http.Error(w, formatAsJSONMessage(err), http.StatusInternalServerError)
-			return
-		}
-		if len(entityList) != 1 {
-			err := fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList))
-			http.Error(w, formatAsJSONMessage(err), http.StatusInternalServerError)
-			return
-		}
-		entity := entityList[0]
-
-		fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
-
-		_, err = env.db.CreatePublicKey(fingerprint, teamPost.PublicKey)
-		if err != nil {
-			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		teamID, teamUUID, err := env.db.CreateTeam(teamPost.Name)
-		if err != nil {
-			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		_, err = env.db.CreateTeamUser(teamID, fingerprint)
-		if err != nil {
-			http.Error(w, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		out, err := json.Marshal(models.TeamUUID{UUID: teamUUID.String()})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		fmt.Fprintf(w, string(out))
-	default:
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -140,4 +86,16 @@ func fingerprintString(b [20]byte) string {
 func formatAsJSONMessage(message string) string {
 	bytes, _ := json.Marshal(map[string]string{"message": message})
 	return string(bytes)
+}
+
+// ShiftPath splits off the first component of p, which will be cleaned of
+// relative components before processing. head will never contain a slash and
+// tail will always be a rooted path without trailing slash.
+func shiftPath(p string) (head, tail string) {
+	p = path.Clean("/" + p)
+	i := strings.Index(p[1:], "/") + 1
+	if i <= 0 {
+		return p[1:], "/"
+	}
+	return p[1:i], p[i:]
 }
