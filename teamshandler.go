@@ -14,6 +14,7 @@ import (
 // TeamsHandler is used to server up HTTP requests to `/teams`
 type TeamsHandler struct {
 	SummaryHandler *SummaryHandler
+	RequestHandler *RequestHandler
 }
 
 func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db models.Datastore) {
@@ -34,6 +35,8 @@ func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db 
 			h.handleGet(uuid, db).ServeHTTP(res, req)
 		case "/summary":
 			h.SummaryHandler.Handler(uuid, db).ServeHTTP(res, req)
+		case "/request":
+			h.RequestHandler.Handler(uuid, db).ServeHTTP(res, req)
 		default:
 			http.Error(res, "Not Found", http.StatusNotFound)
 		}
