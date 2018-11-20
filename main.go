@@ -75,14 +75,6 @@ func connStr() string {
 		host, port, user, password, dbname)
 }
 
-func fingerprintString(b [20]byte) string {
-	return fmt.Sprintf(
-		"%0X %0X %0X %0X %0X  %0X %0X %0X %0X %0X",
-		b[0:2], b[2:4], b[4:6], b[6:8], b[8:10],
-		b[10:12], b[12:14], b[14:16], b[16:18], b[18:20],
-	)
-}
-
 func formatAsJSONMessage(message string) string {
 	bytes, _ := json.Marshal(map[string]string{"message": message})
 	return string(bytes)

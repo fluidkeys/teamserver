@@ -67,20 +67,11 @@ func (h *TeamsHandler) handleIndexPost(db models.Datastore) http.Handler {
 			panic(err)
 		}
 
-		entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(teamPost.PublicKey))
+		fingerprint, err := getFingerprintFromPublicKey(teamPost.PublicKey)
 		if err != nil {
-			err := fmt.Sprintf("error reading armored key ring: %v", err)
-			http.Error(res, formatAsJSONMessage(err), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
-		if len(entityList) != 1 {
-			err := fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList))
-			http.Error(res, formatAsJSONMessage(err), http.StatusInternalServerError)
-			return
-		}
-		entity := entityList[0]
-
-		fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
 
 		_, err = db.CreatePublicKey(fingerprint, teamPost.PublicKey)
 		if err != nil {
@@ -106,6 +97,28 @@ func (h *TeamsHandler) handleIndexPost(db models.Datastore) http.Handler {
 		}
 		fmt.Fprintf(res, string(out))
 	})
+}
+
+func getFingerprintFromPublicKey(armoredPublicKey string) (string, error) {
+	entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(armoredPublicKey))
+	if err != nil {
+		return "", fmt.Errorf("error reading armored key ring: %v", err)
+	}
+	if len(entityList) != 1 {
+		return "", fmt.Errorf("expected 1 openpgp.Entity, got %d", len(entityList))
+	}
+	entity := entityList[0]
+
+	fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
+	return fingerprint, nil
+}
+
+func fingerprintString(b [20]byte) string {
+	return fmt.Sprintf(
+		"%0X %0X %0X %0X %0X  %0X %0X %0X %0X %0X",
+		b[0:2], b[2:4], b[4:6], b[6:8], b[8:10],
+		b[10:12], b[12:14], b[14:16], b[16:18], b[18:20],
+	)
 }
 
 func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Handler {
