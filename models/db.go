@@ -11,6 +11,7 @@ type Datastore interface {
 	CreateTeam(string) (int64, *uuid.UUID, error)
 	CreateTeamUser(int64, string) (int64, error)
 	CreatePublicKey(string, string) (int64, error)
+	GetTeam(uuid.UUID) (*Team, error)
 }
 
 type DB struct {

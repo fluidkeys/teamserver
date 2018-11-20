@@ -101,3 +101,24 @@ func (db *DB) CreatePublicKey(fingerprint string, publicKey string) (int64, erro
 	}
 	return publicKeyId, writeDB.Commit()
 }
+
+func (db *DB) GetTeam(uuid uuid.UUID) (*Team, error) {
+	sqlStatement := `SELECT id, name, uuid FROM teams WHERE uuid=$1`
+	rows, err := db.Query(sqlStatement, uuid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	team := Team{}
+	for rows.Next() {
+		err = rows.Scan(&team.ID, &team.Name, &team.UUID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return &team, nil
+}
