@@ -37,13 +37,6 @@ func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db 
 		default:
 			http.Error(res, "Not Found", http.StatusNotFound)
 		}
-	} else {
-		switch req.Method {
-		case "GET":
-			h.handleGet(uuid, db).ServeHTTP(res, req)
-		default:
-			http.Error(res, "Only GET is allowed", http.StatusMethodNotAllowed)
-		}
 	}
 	return
 }
