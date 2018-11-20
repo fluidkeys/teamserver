@@ -116,15 +116,18 @@ func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Ha
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		uuid, err := uuid.FromString(uuidString)
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		team, err := db.GetTeam(uuid)
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		out, err := json.Marshal(team)
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		fmt.Fprintf(res, string(out))
 	})
@@ -139,17 +142,20 @@ func (h *SummaryHandler) Handler(uuidString string, db models.Datastore) http.Ha
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		uuid, err := uuid.FromString(uuidString)
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		team, err := db.GetTeam(uuid)
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		out, err := json.Marshal(models.TeamSummary{
 			Team: team,
 		})
 		if err != nil {
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
 		}
 		fmt.Fprintf(res, string(out))
 	})
