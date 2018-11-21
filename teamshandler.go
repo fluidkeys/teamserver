@@ -14,6 +14,7 @@ import (
 // TeamsHandler is used to server up HTTP requests to `/teams`
 type TeamsHandler struct {
 	SummaryHandler *SummaryHandler
+	RequestHandler *RequestHandler
 }
 
 func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db models.Datastore) {
@@ -34,6 +35,8 @@ func (h *TeamsHandler) ServeHTTP(res http.ResponseWriter, req *http.Request, db 
 			h.handleGet(uuid, db).ServeHTTP(res, req)
 		case "/summary":
 			h.SummaryHandler.Handler(uuid, db).ServeHTTP(res, req)
+		case "/request":
+			h.RequestHandler.Handler(uuid, db).ServeHTTP(res, req)
 		default:
 			http.Error(res, "Not Found", http.StatusNotFound)
 		}
@@ -64,20 +67,11 @@ func (h *TeamsHandler) handleIndexPost(db models.Datastore) http.Handler {
 			panic(err)
 		}
 
-		entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(teamPost.PublicKey))
+		fingerprint, err := getFingerprintFromPublicKey(teamPost.PublicKey)
 		if err != nil {
-			err := fmt.Sprintf("error reading armored key ring: %v", err)
-			http.Error(res, formatAsJSONMessage(err), http.StatusInternalServerError)
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
-		if len(entityList) != 1 {
-			err := fmt.Sprintf("expected 1 openpgp.Entity, got %d!", len(entityList))
-			http.Error(res, formatAsJSONMessage(err), http.StatusInternalServerError)
-			return
-		}
-		entity := entityList[0]
-
-		fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
 
 		_, err = db.CreatePublicKey(fingerprint, teamPost.PublicKey)
 		if err != nil {
@@ -105,6 +99,28 @@ func (h *TeamsHandler) handleIndexPost(db models.Datastore) http.Handler {
 	})
 }
 
+func getFingerprintFromPublicKey(armoredPublicKey string) (string, error) {
+	entityList, err := openpgp.ReadArmoredKeyRing(strings.NewReader(armoredPublicKey))
+	if err != nil {
+		return "", fmt.Errorf("error reading armored key ring: %v", err)
+	}
+	if len(entityList) != 1 {
+		return "", fmt.Errorf("expected 1 openpgp.Entity, got %d", len(entityList))
+	}
+	entity := entityList[0]
+
+	fingerprint := fingerprintString(entity.PrimaryKey.Fingerprint)
+	return fingerprint, nil
+}
+
+func fingerprintString(b [20]byte) string {
+	return fmt.Sprintf(
+		"%0X %0X %0X %0X %0X  %0X %0X %0X %0X %0X",
+		b[0:2], b[2:4], b[4:6], b[6:8], b[8:10],
+		b[10:12], b[12:14], b[14:16], b[16:18], b[18:20],
+	)
+}
+
 func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		uuid, err := uuid.FromString(uuidString)
@@ -118,34 +134,6 @@ func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Ha
 			return
 		}
 		out, err := json.Marshal(team)
-		if err != nil {
-			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-		fmt.Fprintf(res, string(out))
-	})
-}
-
-// SummaryHandler is used to server up HTTP requests to `/teams/{uuid}/summary`
-type SummaryHandler struct{}
-
-// Handler takes a team UUID and database and then looks up the record in the
-// database, writing JSON back.
-func (h *SummaryHandler) Handler(uuidString string, db models.Datastore) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		uuid, err := uuid.FromString(uuidString)
-		if err != nil {
-			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-		team, err := db.GetTeam(uuid)
-		if err != nil {
-			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
-			return
-		}
-		out, err := json.Marshal(models.TeamSummary{
-			Team: team,
-		})
 		if err != nil {
 			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return

@@ -6,14 +6,18 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// Datastore is an interface specifiying all the ways of interacting with the
+// database
 type Datastore interface {
 	AllTeams() ([]*Team, error)
 	CreateTeam(string) (int64, *uuid.UUID, error)
 	CreateTeamUser(int64, string) (int64, error)
 	CreatePublicKey(string, string) (int64, error)
 	GetTeam(uuid.UUID) (*Team, error)
+	CreateTeamJoinRequest(string, string) (int64, error)
 }
 
+// DB is a struct the points at a sql database
 type DB struct {
 	*sql.DB
 }
