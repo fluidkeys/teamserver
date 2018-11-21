@@ -1,8 +1,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/satori/go.uuid"
 )
 
@@ -105,7 +103,6 @@ func (db *DB) CreatePublicKey(fingerprint string, publicKey string) (int64, erro
 	sqlStatement := `INSERT INTO public_keys (fingerprint, armoredPublicKey)
 		VALUES ($1, $2) ON CONFLICT ON CONSTRAINT public_keys_pkey
 		DO UPDATE SET fingerprint = $1 RETURNING id`
-	fmt.Printf("SQL: %s\n", sqlStatement)
 	// TODO: To ensure we get the return id, I've added the 'ON CONFLICT' clause
 	// I don't really think this is the best approach, but for now it works.
 	writeDB, err := db.Begin()
@@ -149,7 +146,6 @@ func (db *DB) GetTeam(uuid uuid.UUID) (*Team, error) {
 func (db *DB) CreateTeamJoinRequest(fingerprint string, uuid string) (int64, error) {
 	sqlStatement := `INSERT INTO team_join_requests (team_id, fingerprint)
 		SELECT t.id, $2 FROM teams t WHERE uuid=$1 RETURNING id`
-	fmt.Printf("SQL: %s\n", sqlStatement)
 	writeDB, err := db.Begin()
 	if err != nil {
 		writeDB.Rollback()
