@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/fluidkeys/crypto/openpgp"
@@ -133,6 +134,17 @@ func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Ha
 			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
+		teamID, err := strconv.Atoi(team.ID)
+		if err != nil {
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
+		}
+		team.Members, err = db.GetTeamMembers(teamID)
+		if err != nil {
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
+		}
+
 		out, err := json.Marshal(team)
 		if err != nil {
 			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)

@@ -15,6 +15,7 @@ type Datastore interface {
 	CreatePublicKey(string, string) (int64, error)
 	GetTeam(uuid.UUID) (*Team, error)
 	CreateTeamJoinRequest(string, string) (int64, error)
+	GetTeamMembers(int) ([]*Member, error)
 }
 
 // DB is a struct the points at a sql database

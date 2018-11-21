@@ -6,9 +6,10 @@ import (
 
 // A Team represents a Fluidkeys team that use the server
 type Team struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"teamName,omitempty"`
-	UUID string `json:"uuid,omitempty"`
+	ID      string    `json:"id,omitempty"`
+	Name    string    `json:"teamName,omitempty"`
+	UUID    string    `json:"uuid,omitempty"`
+	Members []*Member `json:"members,omitempty"`
 }
 
 // A TeamUUID represents a simple json structure used in response
