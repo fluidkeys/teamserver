@@ -24,6 +24,12 @@ type TeamsPOST struct {
 	PublicKey string `json:"publicKey,omitempty"`
 }
 
+// A RequestPOST represents a simple json structure requesting to join a team
+// posted to the teams UUID, containing the public key
+type RequestPOST struct {
+	PublicKey string `json:"publicKey,omitempty"`
+}
+
 // A TeamSummary represents a simplified team output
 type TeamSummary struct {
 	*Team
@@ -136,4 +142,24 @@ func (db *DB) GetTeam(uuid uuid.UUID) (*Team, error) {
 		return nil, err
 	}
 	return &team, nil
+}
+
+// CreateTeamJoinRequest creates a record team_join_requests record in the
+// database, finding the team id using the passed UUID.
+func (db *DB) CreateTeamJoinRequest(fingerprint string, uuid string) (int64, error) {
+	sqlStatement := `INSERT INTO team_join_requests (team_id, fingerprint)
+		SELECT t.id, $2 FROM teams t WHERE uuid=$1 RETURNING id`
+	fmt.Printf("SQL: %s\n", sqlStatement)
+	writeDB, err := db.Begin()
+	if err != nil {
+		writeDB.Rollback()
+		return 0, err
+	}
+	var teamJoinRequestID int64
+	err = writeDB.QueryRow(sqlStatement, uuid, fingerprint).Scan(&teamJoinRequestID)
+	if err != nil {
+		writeDB.Rollback()
+		return 0, err
+	}
+	return teamJoinRequestID, writeDB.Commit()
 }
