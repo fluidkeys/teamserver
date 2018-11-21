@@ -144,6 +144,11 @@ func (h *TeamsHandler) handleGet(uuidString string, db models.Datastore) http.Ha
 			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
 			return
 		}
+		team.JoinRequests, err = db.GetTeamJoinRequests(teamID)
+		if err != nil {
+			http.Error(res, formatAsJSONMessage(err.Error()), http.StatusInternalServerError)
+			return
+		}
 
 		out, err := json.Marshal(team)
 		if err != nil {
